@@ -148,17 +148,14 @@
   @media (pointer: coarse) {
     .touch-controls {
       display: flex;
-      flex-direction: column;
-      gap: 10px;
+      flex-direction: row;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
       margin-top: 14px;
       user-select: none;
     }
     .keys { display: none; }
-  }
-  .tc-row {
-    display: flex;
-    justify-content: center;
-    gap: 10px;
   }
   .tc-btn {
     -webkit-touch-callout: none;
@@ -175,58 +172,52 @@
     align-items: center;
     justify-content: center;
     cursor: pointer;
+    flex: 0 0 auto;
   }
   .tc-btn:active {
     background: var(--border);
   }
-  .tc-btn.tc-wide { width: 100px; }
 
   @media (max-width: 640px) {
     body {
-      height: 100dvh;
-      align-items: stretch;
-      justify-content: stretch;
+      min-height: 100dvh;
       padding: 8px;
       padding-bottom: max(8px, env(safe-area-inset-bottom));
-      overflow: hidden;
     }
     .app {
       flex-direction: column;
       align-items: stretch;
       width: 100%;
-      height: 100%;
       gap: 6px;
     }
     .title-row { flex: 0 0 auto; margin-bottom: 0; }
     .board-wrap {
-      flex: 1 1 auto;
-      min-height: 0;
       width: 100%;
       max-width: none;
       display: flex;
       flex-direction: column;
       align-items: center;
-      justify-content: center;
     }
     #board {
-      flex: 1 1 0;
-      min-height: 0;
-      min-width: 0;
-      width: auto;
-      max-width: 100%;
+      width: 100%;
+      height: auto;
       aspect-ratio: 1 / 2;
     }
     .touch-controls {
-      flex: 0 0 auto;
+      width: 100%;
       margin-top: 6px;
     }
-    .tc-btn {
-      width: 52px;
-      height: 44px;
-      font-size: 18px;
+    .tc-btn.tc-primary {
+      width: 68px;
+      height: 64px;
+      font-size: 32px;
+    }
+    .tc-btn.tc-dpad {
+      width: 56px;
+      height: 56px;
+      font-size: 22px;
     }
     .side {
-      flex: 0 0 auto;
       width: 100%;
       flex-direction: row;
       flex-wrap: wrap;
@@ -253,15 +244,11 @@
       <button id="overlay-btn">再開</button>
     </div>
     <div class="touch-controls" id="touch-controls">
-      <div class="tc-row">
-        <button class="tc-btn" id="tc-rotate" aria-label="回転">⟳</button>
-        <button class="tc-btn" id="tc-drop" aria-label="ハードドロップ">⤓</button>
-      </div>
-      <div class="tc-row">
-        <button class="tc-btn" id="tc-left" aria-label="左に移動">◀</button>
-        <button class="tc-btn" id="tc-down" aria-label="ソフトドロップ">▼</button>
-        <button class="tc-btn" id="tc-right" aria-label="右に移動">▶</button>
-      </div>
+      <button class="tc-btn tc-primary" id="tc-rotate" aria-label="回転">⟳</button>
+      <button class="tc-btn tc-dpad" id="tc-left" aria-label="左に移動">◀</button>
+      <button class="tc-btn tc-dpad" id="tc-down" aria-label="ソフトドロップ">▼</button>
+      <button class="tc-btn tc-dpad" id="tc-right" aria-label="右に移動">▶</button>
+      <button class="tc-btn tc-primary" id="tc-drop" aria-label="ハードドロップ">⤓</button>
     </div>
   </div>
   <div class="side">
