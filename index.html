@@ -4,37 +4,69 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="theme-color" content="#111319">
-<title>テトリス</title>
+<meta name="theme-color" content="#05060e">
+<title>TETRIS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #111319;
-    --panel: #1c2030;
-    --border: #3a3f55;
-    --text: #e8e8f0;
-    --accent: #6ee7ff;
+    --bg-0: #05060e;
+    --bg-1: #0a0c1a;
+    --surface: rgba(18, 22, 42, 0.55);
+    --surface-2: rgba(30, 36, 66, 0.45);
+    --glass-border: rgba(130, 150, 220, 0.18);
+    --text: #eef1ff;
+    --dim: #838db6;
+    --cyan: #22d3ee;
+    --violet: #a855f7;
+    --blue: #60a5fa;
   }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body {
     overscroll-behavior: none;
+    overflow-x: hidden;
   }
   body {
     margin: 0;
     min-height: 100vh;
     min-height: 100dvh;
-    background: var(--bg);
+    background: radial-gradient(120% 120% at 50% 0%, var(--bg-1) 0%, var(--bg-0) 70%);
     color: var(--text);
-    font-family: "Segoe UI", "Hiragino Sans", sans-serif;
+    font-family: "Segoe UI", "Hiragino Sans", "Yu Gothic UI", sans-serif;
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 16px;
-    padding-bottom: max(16px, env(safe-area-inset-bottom));
+    padding: 20px;
+    padding-bottom: max(20px, env(safe-area-inset-bottom));
     touch-action: manipulation;
+    position: relative;
   }
+  /* Ambient aurora background */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: -25%;
+    z-index: -1;
+    background:
+      radial-gradient(closest-side at 22% 28%, rgba(34, 211, 238, 0.16), transparent),
+      radial-gradient(closest-side at 78% 68%, rgba(168, 85, 247, 0.16), transparent),
+      radial-gradient(closest-side at 55% 92%, rgba(96, 165, 250, 0.12), transparent);
+    filter: blur(30px);
+    animation: drift 26s ease-in-out infinite alternate;
+  }
+  @keyframes drift {
+    0%   { transform: translate3d(-3%, -2%, 0) scale(1); }
+    50%  { transform: translate3d(4%, 3%, 0) scale(1.12); }
+    100% { transform: translate3d(-2%, 4%, 0) scale(1.05); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    body::before { animation: none; }
+  }
+
   .app {
     display: flex;
-    gap: 24px;
+    gap: 28px;
     align-items: flex-start;
   }
   .title-row {
@@ -42,108 +74,180 @@
     align-items: center;
     justify-content: space-between;
     gap: 12px;
-    margin: 0 0 12px;
+    margin: 0 0 16px;
   }
   h1 {
     margin: 0;
-    font-size: 22px;
-    letter-spacing: 2px;
+    font-family: "Orbitron", sans-serif;
+    font-weight: 900;
+    font-size: 30px;
+    letter-spacing: 6px;
+    background: linear-gradient(100deg, var(--cyan) 0%, var(--violet) 55%, var(--blue) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    filter: drop-shadow(0 0 14px rgba(34, 211, 238, 0.45));
   }
   #pause-btn {
-    background: transparent;
-    border: 1px solid var(--border);
+    background: var(--surface);
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--glass-border);
     color: var(--text);
-    width: 34px;
-    height: 34px;
-    border-radius: 8px;
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
     font-size: 16px;
     padding: 0;
     line-height: 1;
     cursor: pointer;
+    transition: border-color .15s, box-shadow .15s;
   }
-  canvas {
-    background: #0a0b10;
-    border: 2px solid var(--border);
-    border-radius: 6px;
-    display: block;
-    touch-action: none;
+  #pause-btn:hover {
+    border-color: var(--cyan);
+    box-shadow: 0 0 14px rgba(34, 211, 238, 0.3);
   }
+
   .board-wrap {
     position: relative;
-    width: min(300px, 88vw);
   }
   #board {
-    width: 100%;
-    height: auto;
+    display: block;
+    width: 300px;
+    height: 600px;
+    border-radius: 10px;
+    border: 1px solid rgba(130, 150, 220, 0.28);
+    background: rgba(6, 8, 16, 0.35);
+    box-shadow:
+      0 0 46px rgba(34, 211, 238, 0.14),
+      0 20px 60px rgba(0, 0, 0, 0.55),
+      inset 0 0 40px rgba(10, 14, 30, 0.6);
+    touch-action: none;
   }
+  .flash {
+    position: absolute;
+    inset: 0;
+    border-radius: 10px;
+    background: #ffffff;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .28s ease;
+  }
+  .flash.on { opacity: 0.55; transition: none; }
+
   .side {
-    width: 180px;
+    width: 190px;
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: 14px;
   }
   .panel {
-    background: var(--panel);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 12px 16px;
+    background: var(--surface);
+    -webkit-backdrop-filter: blur(14px);
+    backdrop-filter: blur(14px);
+    border: 1px solid var(--glass-border);
+    border-radius: 14px;
+    padding: 14px 18px;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 10px 30px rgba(0, 0, 0, 0.35);
   }
   .panel .label {
-    font-size: 12px;
-    color: #9aa0b8;
-    letter-spacing: 1px;
-    margin-bottom: 4px;
+    font-family: "Orbitron", sans-serif;
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--dim);
+    letter-spacing: 3px;
+    margin-bottom: 6px;
   }
   .panel .value {
-    font-size: 24px;
-    font-weight: 600;
-    color: var(--accent);
+    font-family: "Orbitron", sans-serif;
+    font-size: 26px;
+    font-weight: 700;
+    color: var(--cyan);
+    font-variant-numeric: tabular-nums;
+    text-shadow: 0 0 16px rgba(34, 211, 238, 0.4);
+  }
+  .value.pop { animation: pop .34s ease; }
+  @keyframes pop {
+    0% { transform: scale(1); }
+    40% { transform: scale(1.2); }
+    100% { transform: scale(1); }
   }
   #next-canvas {
-    background: #0a0b10;
-    border-radius: 6px;
     display: block;
-    margin: 0 auto;
+    margin: 4px auto 0;
+    border-radius: 8px;
   }
   .keys {
     font-size: 12px;
-    line-height: 1.7;
-    color: #9aa0b8;
+    line-height: 1.9;
+    color: var(--dim);
   }
-  .keys b { color: var(--text); }
+  .keys b {
+    color: var(--text);
+    font-family: "Orbitron", sans-serif;
+    font-weight: 500;
+    letter-spacing: 1px;
+    font-size: 11px;
+  }
+  .keys kbd {
+    display: inline-block;
+    min-width: 18px;
+    padding: 1px 6px;
+    border-radius: 5px;
+    background: var(--surface-2);
+    border: 1px solid var(--glass-border);
+    color: var(--text);
+    font-family: "Orbitron", sans-serif;
+    font-size: 11px;
+    text-align: center;
+  }
+
   .overlay {
     position: absolute;
     inset: 0;
-    background: rgba(10, 11, 16, 0.85);
+    background: rgba(5, 6, 14, 0.78);
+    -webkit-backdrop-filter: blur(6px);
+    backdrop-filter: blur(6px);
     display: none;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    border-radius: 6px;
+    border-radius: 10px;
     text-align: center;
-    gap: 14px;
+    gap: 20px;
   }
   .overlay.show { display: flex; }
   .overlay h2 {
     margin: 0;
-    font-size: 26px;
+    font-family: "Orbitron", sans-serif;
+    font-weight: 900;
+    font-size: 30px;
+    letter-spacing: 4px;
+    color: var(--text);
+    text-shadow: 0 0 20px rgba(168, 85, 247, 0.6);
   }
-  button {
-    font-family: inherit;
-  }
+  button { font-family: inherit; }
   #overlay-btn {
-    background: var(--accent);
-    color: #0a0b10;
+    background: linear-gradient(100deg, var(--cyan), var(--blue));
+    color: #04121a;
     border: none;
-    padding: 10px 22px;
-    border-radius: 6px;
+    padding: 12px 30px;
+    border-radius: 10px;
+    font-family: "Orbitron", sans-serif;
     font-size: 15px;
-    font-weight: 600;
+    font-weight: 700;
+    letter-spacing: 1px;
     cursor: pointer;
+    box-shadow: 0 0 24px rgba(34, 211, 238, 0.45);
+    transition: transform .12s, box-shadow .12s;
   }
-  #overlay-btn:hover { filter: brightness(1.1); }
+  #overlay-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 0 32px rgba(34, 211, 238, 0.6);
+  }
+  #overlay-btn:active { transform: translateY(0); }
 
-  /* Touch controls: shown only on touch/coarse-pointer devices */
+  /* Touch controls: shown only on touch / coarse-pointer devices */
   .touch-controls { display: none; }
   @media (pointer: coarse) {
     .touch-controls {
@@ -152,7 +256,7 @@
       align-items: center;
       justify-content: space-between;
       gap: 8px;
-      margin-top: 14px;
+      margin-top: 16px;
       user-select: none;
     }
     .keys { display: none; }
@@ -161,10 +265,12 @@
     -webkit-touch-callout: none;
     touch-action: none;
     user-select: none;
-    background: var(--panel);
-    border: 1px solid var(--border);
+    background: var(--surface);
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--glass-border);
     color: var(--text);
-    border-radius: 12px;
+    border-radius: 14px;
     font-size: 22px;
     width: 64px;
     height: 56px;
@@ -173,27 +279,33 @@
     justify-content: center;
     cursor: pointer;
     flex: 0 0 auto;
+    transition: background .1s, box-shadow .1s;
   }
   .tc-btn:active {
-    background: var(--border);
+    background: var(--surface-2);
+    box-shadow: 0 0 18px rgba(34, 211, 238, 0.35);
+  }
+  .tc-btn.tc-primary {
+    color: var(--cyan);
+    border-color: rgba(34, 211, 238, 0.35);
   }
 
   @media (max-width: 640px) {
     body {
       min-height: 100dvh;
-      padding: 8px;
-      padding-bottom: max(8px, env(safe-area-inset-bottom));
+      padding: 12px;
+      padding-bottom: max(12px, env(safe-area-inset-bottom));
     }
     .app {
       flex-direction: column;
       align-items: stretch;
       width: 100%;
-      gap: 6px;
+      gap: 8px;
     }
+    h1 { font-size: 24px; letter-spacing: 4px; }
     .title-row { flex: 0 0 auto; margin-bottom: 0; }
     .board-wrap {
       width: 100%;
-      max-width: none;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -203,45 +315,37 @@
       height: auto;
       aspect-ratio: 1 / 2;
     }
-    .touch-controls {
-      width: 100%;
-      margin-top: 6px;
-    }
-    .tc-btn.tc-primary {
-      width: 68px;
-      height: 64px;
-      font-size: 32px;
-    }
-    .tc-btn.tc-dpad {
-      width: 56px;
-      height: 56px;
-      font-size: 22px;
-    }
+    .touch-controls { width: 100%; margin-top: 10px; }
+    .tc-btn.tc-primary { width: 70px; height: 66px; font-size: 34px; }
+    .tc-btn.tc-dpad { width: 56px; height: 58px; font-size: 22px; }
     .side {
       width: 100%;
       flex-direction: row;
       flex-wrap: wrap;
-      gap: 6px;
+      gap: 8px;
     }
-    .side .panel { flex: 1 1 70px; padding: 5px 10px; }
-    .side .panel:has(#next-canvas) { flex: 0 0 auto; padding: 4px 8px; }
-    #next-canvas { width: 40px; height: 40px; }
-    .panel .label { font-size: 9px; margin-bottom: 1px; }
-    .panel .value { font-size: 16px; }
+    .side .panel { flex: 1 1 72px; padding: 8px 12px; }
+    .side .panel:has(#next-canvas) { flex: 0 0 auto; padding: 6px 10px; }
+    #next-canvas { width: 44px; height: 44px; }
+    .panel .label { font-size: 9px; letter-spacing: 2px; margin-bottom: 2px; }
+    .panel .value { font-size: 18px; }
   }
 </style>
 </head>
 <body>
 <div class="app">
-  <div class="board-wrap">
+  <div class="board-col">
     <div class="title-row">
       <h1>TETRIS</h1>
       <button id="pause-btn" aria-label="一時停止">⏸</button>
     </div>
-    <canvas id="board" width="300" height="600"></canvas>
-    <div class="overlay" id="overlay">
-      <h2 id="overlay-title">PAUSED</h2>
-      <button id="overlay-btn">再開</button>
+    <div class="board-wrap">
+      <canvas id="board" width="300" height="600"></canvas>
+      <div class="flash" id="flash"></div>
+      <div class="overlay" id="overlay">
+        <h2 id="overlay-title">PAUSED</h2>
+        <button id="overlay-btn">再開</button>
+      </div>
     </div>
     <div class="touch-controls" id="touch-controls">
       <button class="tc-btn tc-primary" id="tc-rotate" aria-label="回転">⟳</button>
@@ -269,13 +373,12 @@
       <div class="value" id="lines">0</div>
     </div>
     <div class="panel keys">
-      <b>操作方法</b><br>
-      ← →: 移動<br>
-      ↑: 回転<br>
-      ↓: ソフトドロップ<br>
-      Space: ハードドロップ<br>
-      P: 一時停止<br>
-      R: リスタート
+      <b>CONTROLS</b><br>
+      <kbd>←</kbd> <kbd>→</kbd> 移動<br>
+      <kbd>↑</kbd> 回転<br>
+      <kbd>↓</kbd> ソフトドロップ<br>
+      <kbd>Space</kbd> ハードドロップ<br>
+      <kbd>P</kbd> 一時停止 / <kbd>R</kbd> リスタート
     </div>
   </div>
 </div>
@@ -284,15 +387,17 @@
 const COLS = 10;
 const ROWS = 20;
 const CELL = 30;
+const W = COLS * CELL;
+const H = ROWS * CELL;
 
 const COLORS = {
-  I: '#6ee7ff',
-  O: '#ffd166',
-  T: '#c77dff',
-  S: '#7bf1a8',
-  Z: '#ff6b6b',
-  J: '#5c9dff',
-  L: '#ff9f4a'
+  I: '#22d3ee',
+  O: '#fbbf24',
+  T: '#c084fc',
+  S: '#34d399',
+  Z: '#fb7185',
+  J: '#60a5fa',
+  L: '#fb923c'
 };
 
 const SHAPES = {
@@ -316,9 +421,35 @@ const overlay = document.getElementById('overlay');
 const overlayTitle = document.getElementById('overlay-title');
 const overlayBtn = document.getElementById('overlay-btn');
 const pauseBtn = document.getElementById('pause-btn');
+const flashEl = document.getElementById('flash');
 
 let grid, current, next, score, level, lines, gameOver, paused;
 let dropInterval, lastTime, dropCounter;
+
+// High-DPI setup so glow and edges stay crisp.
+function setupCanvas(canvas, c, cssW, cssH) {
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  canvas.width = cssW * dpr;
+  canvas.height = cssH * dpr;
+  c.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+setupCanvas(boardCanvas, ctx, W, H);
+setupCanvas(nextCanvas, nctx, 100, 100);
+
+function roundRectPath(c, x, y, w, h, r) {
+  if (typeof c.roundRect === 'function') {
+    c.beginPath();
+    c.roundRect(x, y, w, h, r);
+    return;
+  }
+  c.beginPath();
+  c.moveTo(x + r, y);
+  c.arcTo(x + w, y, x + w, y + h, r);
+  c.arcTo(x + w, y + h, x, y + h, r);
+  c.arcTo(x, y + h, x, y, r);
+  c.arcTo(x, y, x + w, y, r);
+  c.closePath();
+}
 
 function emptyGrid() {
   return Array.from({ length: ROWS }, () => Array(COLS).fill(null));
@@ -392,6 +523,8 @@ function clearLines() {
     level = Math.floor(lines / 10) + 1;
     dropInterval = Math.max(100, 1000 - (level - 1) * 80);
     updateHud();
+    pop(scoreEl);
+    if (cleared >= 1) triggerFlash();
   }
 }
 
@@ -438,42 +571,144 @@ function updateHud() {
   linesEl.textContent = lines;
 }
 
-function drawCell(c, x, y, color) {
+function pop(el) {
+  el.classList.remove('pop');
+  // force reflow so the animation can retrigger
+  void el.offsetWidth;
+  el.classList.add('pop');
+}
+
+function triggerFlash() {
+  flashEl.classList.add('on');
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => flashEl.classList.remove('on'));
+  });
+}
+
+// ---- Rendering ----
+function drawBlock(c, gx, gy, color, mode) {
+  const px = gx * CELL;
+  const py = gy * CELL;
+  const pad = 1.5;
+  const x = px + pad, y = py + pad, s = CELL - pad * 2;
+
+  if (mode === 'ghost') {
+    c.save();
+    c.globalAlpha = 0.22;
+    c.fillStyle = color;
+    roundRectPath(c, x, y, s, s, 5);
+    c.fill();
+    c.globalAlpha = 0.85;
+    c.lineWidth = 2;
+    c.strokeStyle = color;
+    roundRectPath(c, x, y, s, s, 5);
+    c.stroke();
+    c.restore();
+    return;
+  }
+
+  c.save();
+  if (mode === 'active') {
+    c.shadowColor = color;
+    c.shadowBlur = 16;
+  }
   c.fillStyle = color;
-  c.fillRect(x * CELL + 1, y * CELL + 1, CELL - 2, CELL - 2);
-  c.strokeStyle = 'rgba(255,255,255,0.15)';
-  c.strokeRect(x * CELL + 1, y * CELL + 1, CELL - 2, CELL - 2);
+  roundRectPath(c, x, y, s, s, 5);
+  c.fill();
+  c.shadowBlur = 0;
+  // top highlight
+  c.fillStyle = 'rgba(255,255,255,0.28)';
+  c.fillRect(x + 2, y + 2, s - 4, 3);
+  // bottom shade
+  c.fillStyle = 'rgba(0,0,0,0.30)';
+  c.fillRect(x + 2, y + s - 5, s - 4, 3);
+  // subtle inner edge
+  c.lineWidth = 1;
+  c.strokeStyle = 'rgba(255,255,255,0.12)';
+  roundRectPath(c, x, y, s, s, 5);
+  c.stroke();
+  c.restore();
+}
+
+function drawGrid(c) {
+  c.save();
+  c.strokeStyle = 'rgba(120,140,200,0.07)';
+  c.lineWidth = 1;
+  for (let x = 1; x < COLS; x++) {
+    c.beginPath();
+    c.moveTo(x * CELL, 0);
+    c.lineTo(x * CELL, H);
+    c.stroke();
+  }
+  for (let y = 1; y < ROWS; y++) {
+    c.beginPath();
+    c.moveTo(0, y * CELL);
+    c.lineTo(W, y * CELL);
+    c.stroke();
+  }
+  c.restore();
 }
 
 function draw() {
-  ctx.clearRect(0, 0, boardCanvas.width, boardCanvas.height);
+  ctx.clearRect(0, 0, W, H);
+  drawGrid(ctx);
+
+  // locked blocks
   for (let y = 0; y < ROWS; y++) {
     for (let x = 0; x < COLS; x++) {
-      if (grid[y][x]) drawCell(ctx, x, y, COLORS[grid[y][x]]);
+      if (grid[y][x]) drawBlock(ctx, x, y, COLORS[grid[y][x]], 'locked');
     }
   }
-  for (const c of current.cells) {
-    const y = c.y + current.y;
-    if (y >= 0) drawCell(ctx, c.x + current.x, y, COLORS[current.type]);
+
+  // ghost piece (landing preview)
+  let ghostY = current.y;
+  while (!collides(current.cells, current.x, ghostY + 1)) ghostY++;
+  if (ghostY > current.y) {
+    for (const cc of current.cells) {
+      const y = cc.y + ghostY;
+      if (y >= 0) drawBlock(ctx, cc.x + current.x, y, COLORS[current.type], 'ghost');
+    }
+  }
+
+  // active piece
+  for (const cc of current.cells) {
+    const y = cc.y + current.y;
+    if (y >= 0) drawBlock(ctx, cc.x + current.x, y, COLORS[current.type], 'active');
   }
 }
 
 function drawNext() {
-  nctx.clearRect(0, 0, nextCanvas.width, nextCanvas.height);
+  nctx.clearRect(0, 0, 100, 100);
   const size = 20;
   const xs = next.cells.map(c => c.x);
   const ys = next.cells.map(c => c.y);
-  const minX = Math.min(...xs), minY = Math.min(...ys);
+  const minX = Math.min(...xs), maxX = Math.max(...xs);
+  const minY = Math.min(...ys), maxY = Math.max(...ys);
+  const wCells = maxX - minX + 1;
+  const hCells = maxY - minY + 1;
+  const offX = (100 - wCells * size) / 2;
+  const offY = (100 - hCells * size) / 2;
+  const color = COLORS[next.type];
   for (const c of next.cells) {
-    nctx.fillStyle = COLORS[next.type];
-    nctx.fillRect((c.x - minX) * size + 10, (c.y - minY) * size + 10, size - 2, size - 2);
+    const bx = offX + (c.x - minX) * size;
+    const by = offY + (c.y - minY) * size;
+    nctx.save();
+    nctx.shadowColor = color;
+    nctx.shadowBlur = 12;
+    nctx.fillStyle = color;
+    roundRectPath(nctx, bx + 1, by + 1, size - 2, size - 2, 4);
+    nctx.fill();
+    nctx.shadowBlur = 0;
+    nctx.fillStyle = 'rgba(255,255,255,0.28)';
+    nctx.fillRect(bx + 3, by + 3, size - 6, 2);
+    nctx.restore();
   }
 }
 
 function endGame() {
   gameOver = true;
   overlayTitle.textContent = 'GAME OVER';
-  overlayBtn.textContent = 'リスタート';
+  overlayBtn.textContent = 'RESTART';
   overlay.classList.add('show');
 }
 
