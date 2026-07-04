@@ -2,6 +2,9 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#111319">
 <title>テトリス</title>
 <style>
   :root {
@@ -11,35 +14,68 @@
     --text: #e8e8f0;
     --accent: #6ee7ff;
   }
-  * { box-sizing: border-box; }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    overscroll-behavior: none;
+  }
   body {
     margin: 0;
     min-height: 100vh;
+    min-height: 100dvh;
     background: var(--bg);
     color: var(--text);
     font-family: "Segoe UI", "Hiragino Sans", sans-serif;
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 20px;
+    padding: 16px;
+    padding-bottom: max(16px, env(safe-area-inset-bottom));
+    touch-action: manipulation;
   }
   .app {
     display: flex;
     gap: 24px;
     align-items: flex-start;
   }
-  h1 {
+  .title-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
     margin: 0 0 12px;
+  }
+  h1 {
+    margin: 0;
     font-size: 22px;
     letter-spacing: 2px;
+  }
+  #pause-btn {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text);
+    width: 34px;
+    height: 34px;
+    border-radius: 8px;
+    font-size: 16px;
+    padding: 0;
+    line-height: 1;
+    cursor: pointer;
   }
   canvas {
     background: #0a0b10;
     border: 2px solid var(--border);
     border-radius: 6px;
     display: block;
+    touch-action: none;
   }
-  .board-wrap { position: relative; }
+  .board-wrap {
+    position: relative;
+    width: min(300px, 88vw);
+  }
+  #board {
+    width: 100%;
+    height: auto;
+  }
   .side {
     width: 180px;
     display: flex;
@@ -93,6 +129,9 @@
     font-size: 26px;
   }
   button {
+    font-family: inherit;
+  }
+  #overlay-btn {
     background: var(--accent);
     color: #0a0b10;
     border: none;
@@ -102,17 +141,83 @@
     font-weight: 600;
     cursor: pointer;
   }
-  button:hover { filter: brightness(1.1); }
+  #overlay-btn:hover { filter: brightness(1.1); }
+
+  /* Touch controls: shown only on touch/coarse-pointer devices */
+  .touch-controls { display: none; }
+  @media (pointer: coarse) {
+    .touch-controls {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-top: 14px;
+      user-select: none;
+    }
+    .keys { display: none; }
+  }
+  .tc-row {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+  }
+  .tc-btn {
+    -webkit-touch-callout: none;
+    touch-action: none;
+    user-select: none;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 12px;
+    font-size: 22px;
+    width: 64px;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+  }
+  .tc-btn:active {
+    background: var(--border);
+  }
+  .tc-btn.tc-wide { width: 100px; }
+
+  @media (max-width: 620px) {
+    .app {
+      flex-direction: column;
+      align-items: center;
+    }
+    .side {
+      width: min(300px, 88vw);
+      flex-direction: row;
+      flex-wrap: wrap;
+    }
+    .side .panel { flex: 1 1 80px; }
+    .side .panel:has(#next-canvas) { flex-basis: 100%; }
+  }
 </style>
 </head>
 <body>
 <div class="app">
   <div class="board-wrap">
-    <h1>TETRIS</h1>
+    <div class="title-row">
+      <h1>TETRIS</h1>
+      <button id="pause-btn" aria-label="一時停止">⏸</button>
+    </div>
     <canvas id="board" width="300" height="600"></canvas>
     <div class="overlay" id="overlay">
       <h2 id="overlay-title">PAUSED</h2>
       <button id="overlay-btn">再開</button>
+    </div>
+    <div class="touch-controls" id="touch-controls">
+      <div class="tc-row">
+        <button class="tc-btn" id="tc-rotate" aria-label="回転">⟳</button>
+        <button class="tc-btn" id="tc-drop" aria-label="ハードドロップ">⤓</button>
+      </div>
+      <div class="tc-row">
+        <button class="tc-btn" id="tc-left" aria-label="左に移動">◀</button>
+        <button class="tc-btn" id="tc-down" aria-label="ソフトドロップ">▼</button>
+        <button class="tc-btn" id="tc-right" aria-label="右に移動">▶</button>
+      </div>
     </div>
   </div>
   <div class="side">
@@ -179,6 +284,7 @@ const linesEl = document.getElementById('lines');
 const overlay = document.getElementById('overlay');
 const overlayTitle = document.getElementById('overlay-title');
 const overlayBtn = document.getElementById('overlay-btn');
+const pauseBtn = document.getElementById('pause-btn');
 
 let grid, current, next, score, level, lines, gameOver, paused;
 let dropInterval, lastTime, dropCounter;
@@ -403,6 +509,58 @@ overlayBtn.addEventListener('click', () => {
     togglePause();
   }
 });
+
+pauseBtn.addEventListener('click', togglePause);
+
+// Touch controls: tap for single actions, press-and-hold repeats for movement.
+function bindTap(el, action) {
+  el.addEventListener('click', (e) => {
+    e.preventDefault();
+    if (gameOver || paused) return;
+    action();
+  });
+}
+
+function bindHold(el, action, repeatMs = 100, initialDelayMs = 220) {
+  let holdTimer = null;
+  let active = false;
+
+  const fire = () => {
+    if (gameOver || paused) return;
+    action();
+  };
+
+  const start = (e) => {
+    e.preventDefault();
+    if (active) return;
+    active = true;
+    fire();
+    holdTimer = setTimeout(function repeat() {
+      if (!active) return;
+      fire();
+      holdTimer = setTimeout(repeat, repeatMs);
+    }, initialDelayMs);
+  };
+
+  const stop = (e) => {
+    if (e) e.preventDefault();
+    active = false;
+    clearTimeout(holdTimer);
+  };
+
+  el.addEventListener('touchstart', start, { passive: false });
+  el.addEventListener('touchend', stop);
+  el.addEventListener('touchcancel', stop);
+  el.addEventListener('mousedown', start);
+  el.addEventListener('mouseup', stop);
+  el.addEventListener('mouseleave', stop);
+}
+
+bindTap(document.getElementById('tc-rotate'), rotate);
+bindTap(document.getElementById('tc-drop'), hardDrop);
+bindHold(document.getElementById('tc-left'), () => move(-1));
+bindHold(document.getElementById('tc-right'), () => move(1));
+bindHold(document.getElementById('tc-down'), () => { softDrop(); dropCounter = 0; });
 
 resetGame();
 requestAnimationFrame(loop);
